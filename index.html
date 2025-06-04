@@ -1,136 +1,62 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>VK Auth Example</title>
-    <script src="https://vk.com/js/api/openapi.js?169" type="text/javascript"></script>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            text-align: center;
-        }
-        button {
-            background-color: #4a76a8;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            font-size: 16px;
-            border-radius: 4px;
-            cursor: pointer;
-            margin: 10px;
-        }
-        button:hover {
-            background-color: #3d638a;
-        }
-        #user-info {
-            margin-top: 20px;
-            padding: 20px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            display: none;
-        }
-        #user-photo {
-            border-radius: 50%;
-            margin-bottom: 10px;
-            width: 100px;
-            height: 100px;
-            object-fit: cover;
-        }
-        .error {
-            color: red;
-            margin-top: 20px;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <title>VKID Авторизация</title>
+  <script src="https://unpkg.com/@vkid/sdk@^2.1.0/dist-sdk/umd/index.js"></script>
 </head>
 <body>
-    <h1>Пример авторизации через VK</h1>
 
-    <div id="auth-section">
-        <button id="vk-login-btn">Войти через VK</button>
-    </div>
+<div id="vkid-root"></div>
 
-    <div id="user-info">
-        <img id="user-photo" src="" alt="Фото профиля" />
-        <h2 id="user-name"></h2>
-        <button id="logout-btn">Выйти</button>
-    </div>
+<script type="text/javascript">
+  // Проверяем, что VKID SDK загружен
+  if ('VKIDSDK' in window) {
+    const VKID = window.VKIDSDK;
 
-    <div id="error-message" class="error"></div>
+    // Инициализируем SDK с параметрами
+    VKID.Config.init({
+      app: 53689889, // Твой appId VK
+      redirectUrl: 'https://golfo-developer.github.io/mz/', // URL редиректа после авторизации
+      responseMode: VKID.ConfigResponseMode.Callback,
+      source: VKID.ConfigSource.LOWCODE,
+      scope: '', // Доступы, например: 'email'
+    });
 
-    <script>
-        // Инициализация VK API — обязательно заменить appId на ваш!
-        VK.init({
-            apiId: 53689889, // <-- Замените на ваш app_id из ВК
-            onlyWidgets: false
-        });
+    // Создаем виджет Floating One Tap
+    const floatingOneTap = new VKID.FloatingOneTap();
 
-        const loginBtn = document.getElementById('vk-login-btn');
-        const logoutBtn = document.getElementById('logout-btn');
-        const userInfo = document.getElementById('user-info');
-        const userPhoto = document.getElementById('user-photo');
-        const userName = document.getElementById('user-name');
-        const errorMessage = document.getElementById('error-message');
-        const authSection = document.getElementById('auth-section');
+    floatingOneTap.render({
+      appName: 'MZ HELPER',
+      showAlternativeLogin: true
+    })
+    .on(VKID.WidgetEvents.ERROR, vkidOnError)
+    .on(VKID.FloatingOneTapInternalEvents.LOGIN_SUCCESS, function (payload) {
+      const code = payload.code;
+      const deviceId = payload.device_id;
 
-        // Проверка статуса авторизации при загрузке страницы
-        VK.Auth.getLoginStatus(function(response) {
-            if (response.status === 'connected' && response.session) {
-                showUserInfo(response.session.user);
-            }
-        });
+      // Обмен кода на токен
+      VKID.Auth.exchangeCode(code, deviceId)
+        .then(vkidOnSuccess)
+        .catch(vkidOnError);
+    });
 
-        // Вход через VK
-        loginBtn.addEventListener('click', function() {
-            VK.Auth.login(function(response) {
-                if (response.session) {
-                    showUserInfo(response.session.user);
-                } else {
-                    showError('Пользователь отменил вход или не дал разрешения');
-                }
-            }, VK.access.FRIENDS | VK.access.PHOTOS); // Можно указать другие права
-        });
+    function vkidOnSuccess(data) {
+      floatingOneTap.close();
 
-        // Выход из VK
-        logoutBtn.addEventListener('click', function() {
-            VK.Auth.logout(function() {
-                userInfo.style.display = 'none';
-                authSection.style.display = 'block';
-                errorMessage.textContent = '';
-            });
-        });
+      console.log('Авторизация успешна!', data);
+      // Здесь можно обработать полученные данные:
+      // data содержит access_token, user info и т.п.
+    }
 
-        // Показ информации о пользователе
-        function showUserInfo(user) {
-            // В некоторых случаях фото в session может отсутствовать, запросим отдельно
-            VK.Api.call('users.get', {
-                user_ids: user.id,
-                fields: 'photo_200,city,country'
-            }, function(response) {
-                if (response.response && response.response.length) {
-                    const userData = response.response[0];
-                    userPhoto.src = userData.photo_200 || '';
-                    userName.textContent = userData.first_name + ' ' + userData.last_name;
-                } else {
-                    // fallback — данные из сессии
-                    userPhoto.src = user.photo_200 || user.photo_100 || '';
-                    userName.textContent = user.first_name + ' ' + user.last_name;
-                }
-            });
+    function vkidOnError(error) {
+      console.error('Ошибка авторизации VKID:', error);
+      // Можно вывести сообщение пользователю
+    }
+  } else {
+    console.error('VKID SDK не загружен');
+  }
+</script>
 
-            userInfo.style.display = 'block';
-            authSection.style.display = 'none';
-            errorMessage.textContent = '';
-        }
-
-        // Показ ошибки
-        function showError(message) {
-            errorMessage.textContent = message;
-            console.error(message);
-        }
-    </script>
 </body>
 </html>
