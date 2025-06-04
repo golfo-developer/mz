@@ -1,0 +1,31 @@
+<script>
+    // Проверка авторизации
+    const currentUserId = localStorage.getItem("userId");
+    const userName = localStorage.getItem("userName");
+
+    if (!currentUserId || !userName) {
+        // Неавторизованный пользователь
+        window.location.href = "index.html";
+    }
+
+    window.onload = function () {
+        document.getElementById("user-name").textContent = userName;
+        document.getElementById("auth-section").style.display = "none";
+        document.getElementById("user-data").style.display = "block";
+        document.getElementById("order-form").style.display = "block";
+
+        // Firestore: загрузка подписи и должности
+        db.collection("users").doc(currentUserId).get().then(doc => {
+            if (doc.exists) {
+                const data = doc.data();
+                if (data.position) {
+                    document.getElementById("user-position").textContent = data.position;
+                    document.getElementById("position-input").value = data.position;
+                }
+                if (data.signature) {
+                    document.getElementById("signature-input").value = data.signature;
+                }
+            }
+        });
+    };
+</script>
