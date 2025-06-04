@@ -1,100 +1,33 @@
 <!DOCTYPE html>
 <html lang="ru">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" href="/favicon.ico" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<head>
+  <meta charset="UTF-8" />
+  <title>Авторизация VK</title>
+</head>
+<body>
+  <h1>Авторизация через VK</h1>
+  <p id="status">Обработка данных...</p>
 
-    <title>Портал - Министерство здравоохранения</title>
-    <meta name="description" content="Портал министерства здравоохранения. Всё самое необходимое на одном сайте">
-    <meta name="theme-color" content="#ee4018">
+  <script>
+    const hash = window.location.hash;
+    if (hash.includes("access_token")) {
+      const params = new URLSearchParams(hash.substring(1));
+      const token = params.get("access_token");
+      const userId = params.get("user_id");
 
-    <meta property="og:description" content="Портал министерства здравоохранения. Всё самое необходимое на одном сайте">
-    <meta property="og:image" content="/images/og_image.png">
+      document.getElementById("status").innerText = `Вы вошли как VK ID: ${userId}`;
 
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:description" content="Портал министерства здравоохранения. Всё самое необходимое на одном сайте">
-    <meta name="twitter:image" content="/images/og_image.png">
+      // 💾 Можно сохранить в localStorage или отправить на сервер
+      localStorage.setItem("vk_token", token);
+      localStorage.setItem("vk_user_id", userId);
 
-    <script src="/scripts/jquery.js"></script>
-
-    <link href="https://fonts.googleapis.com/icon?family=Material+Symbols+Rounded" rel="stylesheet" />
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.2/css/brands.min.css" rel="stylesheet" crossorigin="anonymous">
-    <script type="module" crossorigin src="/assets/index-3f0681f7.js"></script>
-    <link rel="stylesheet" href="/assets/index-d2bdd13b.css">
-
-    <!-- VKID SDK -->
-    <script src="https://unpkg.com/@vkid/sdk@^2.1.0/dist-sdk/umd/index.js"></script>
-
-    <style>
-      html, body {
-        height: 100%;
-        margin: 0;
-        padding: 0;
-        background: #f7f7f7;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-
-      #vkid-root {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        min-height: 150px;
-      }
-    </style>
-  </head>
-  <body oncontextmenu="return false;">
-    <!-- VKID Floating One Tap -->
-    <div id="vkid-root"></div>
-
-    <script type="text/javascript">
-      if ('VKIDSDK' in window) {
-        const VKID = window.VKIDSDK;
-
-        VKID.Config.init({
-          app: 53689889,
-          redirectUrl: 'https://golfo-developer.github.io/mz/',
-          responseMode: VKID.ConfigResponseMode.Callback,
-          source: VKID.ConfigSource.LOWCODE,
-          scope: '',
-        });
-
-        const floatingOneTap = new VKID.FloatingOneTap();
-
-        floatingOneTap.render({
-          appName: 'MZ HELPER',
-          showAlternativeLogin: true
-        })
-        .on(VKID.WidgetEvents.ERROR, vkidOnError)
-        .on(VKID.FloatingOneTapInternalEvents.LOGIN_SUCCESS, function (payload) {
-          const code = payload.code;
-          const deviceId = payload.device_id;
-
-          VKID.Auth.exchangeCode(code, deviceId)
-            .then(vkidOnSuccess)
-            .catch(vkidOnError);
-        });
-
-        function vkidOnSuccess(data) {
-          floatingOneTap.close();
-          console.log('✅ Авторизация успешна!', data);
-
-          // Пример: сохраняем access_token
-          localStorage.setItem('vk_access_token', data.access_token);
-          localStorage.setItem('vk_user_id', data.user.id);
-
-          // Переход на основную страницу
-          window.location.href = '/mz/main.html';
-        }
-
-        function vkidOnError(error) {
-          console.error('❌ Ошибка авторизации VKID:', error);
-        }
-      } else {
-        console.error('❌ VKID SDK не загружен');
-      }
-    </script>
-  </body>
+      // 🔁 Редирект на главную или в личный кабинет
+      setTimeout(() => {
+        window.location.href = "/dashboard.html";
+      }, 2000);
+    } else {
+      document.getElementById("status").innerText = "Ошибка авторизации";
+    }
+  </script>
+</body>
 </html>
