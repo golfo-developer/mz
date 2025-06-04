@@ -3,79 +3,113 @@
 <head>
     <title>Генератор приказов ЦГБ-Н</title>
     <style>
-        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        body { font-family: Arial; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .auth-section { margin-bottom: 20px; }
         .form-group { margin-bottom: 15px; }
-        textarea, input, select { width: 100%; padding: 8px; margin-top: 5px; }
+        input, textarea, select { width: 100%; padding: 8px; margin-top: 5px; }
         button { background: #4CAF50; color: white; border: none; padding: 10px 15px; cursor: pointer; }
         #result { margin-top: 20px; white-space: pre-line; border: 1px solid #ddd; padding: 15px; }
+        #user-data { display: none; }
     </style>
+    <!-- Firebase + VK SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://vk.com/js/api/openapi.js?169"></script>
 </head>
 <body>
-    <h1>Генератор приказов ЦГБ-Н</h1>
-    
-    <div class="form-group">
-        <label>Шаблон приказа:</label>
-        <select id="template">
-            <option value="feldsher">Допуск фельдшера</option>
-            <option value="other">Другой приказ</option>
-        </select>
+    <div id="auth-section" class="auth-section">
+        <h2>Авторизация через ВКонтакте</h2>
+        <button onclick="loginVK()">Войти через VK</button>
     </div>
 
-    <div id="feldsher-fields">
-        <div class="form-group">
-            <label>ФИО фельдшера:</label>
-            <input type="text" id="name" placeholder="Roman_Asimov">
-        </div>
-        <div class="form-group">
-            <label>Уроки и оценки (каждая строка = урок + оценка):</label>
-            <textarea id="lessons" rows="4">Урок 4 и проверку знаний; Оценка преподавателя: 5
-Урок 5 и проверку знаний; Оценка преподавателя: 5</textarea>
-        </div>
-        <div class="form-group">
-            <label>Должность подписанта:</label>
-            <input type="text" id="signer_post" value="Заместитель Заведующего Отделением Интернатуры">
-        </div>
-        <div class="form-group">
-            <label>ФИО подписанта:</label>
-            <input type="text" id="signer_name" value="Воронковский Андрей Андреевич">
-        </div>
-        <div class="form-group">
-            <label>Тег подписанта:</label>
-            <input type="text" id="signer_tag" value="@dr_swag">
-        </div>
+    <div id="user-data">
+        <h2>Добро пожаловать, <span id="user-name"></span>!</h2>
+        <p>Ваша должность: <span id="user-position"></span></p>
     </div>
 
-    <button onclick="generateOrder()">Сгенерировать приказ</button>
-    
-    <div id="result"></div>
-    <button onclick="copyToClipboard()" id="copyBtn" style="display: none;">Копировать</button>
+    <div id="order-form" style="display: none;">
+        <h1>📜 Приказ о принятии сотрудника</h1>
+        <div class="form-group">
+            <label>ФИО нового сотрудника:</label>
+            <input type="text" id="new-employee" placeholder="Иванов Иван Иванович">
+        </div>
+        <div class="form-group">
+            <label>Должность:</label>
+            <input type="text" id="employee-position" placeholder="Фельдшер">
+        </div>
+        <div class="form-group">
+            <label>Дата принятия:</label>
+            <input type="date" id="accept-date">
+        </div>
+        <button onclick="generateAcceptOrder()">Сгенерировать приказ</button>
+        <div id="result"></div>
+        <button onclick="copyToClipboard()" id="copyBtn">Копировать</button>
+    </div>
 
     <script>
-        function generateOrder() {
-            const template = document.getElementById("template").value;
-            let orderText = "";
-            
-            if (template === "feldsher") {
-                const name = document.getElementById("name").value;
-                const lessons = document.getElementById("lessons").value;
-                const signerPost = document.getElementById("signer_post").value;
-                const signerName = document.getElementById("signer_name").value;
-                const signerTag = document.getElementById("signer_tag").value;
-                
-                orderText = `[ЦГБ-Н] Приказ #${Math.floor(Math.random() * 9000) + 1000}\n\n` +
-                            `Фельдшер ${name} прослушал:\n\n` +
-                            `${lessons}\n\n` +
-                            `Сотрудник допущен до прохождения Практической Подготовки Фельдшера\n\n` +
-                            `Подписано: ${signerPost} | ${signerName}.\n${signerTag}`;
-            }
-            
-            document.getElementById("result").textContent = orderText;
-            document.getElementById("copyBtn").style.display = "block";
+        // Конфиг Firebase (замени на свой!)
+        const firebaseConfig = {
+            apiKey: "ВАШ_API_KEY",
+            authDomain: "ВАШ_PROJECT.firebaseapp.com",
+            projectId: "ВАШ_PROJECT",
+            storageBucket: "ВАШ_PROJECT.appspot.com",
+            messagingSenderId: "ВАШ_SENDER_ID",
+            appId: "ВАШ_APP_ID"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+
+        // Инициализация VK API
+        VK.init({ apiId: ВАШ_VK_APP_ID });
+
+        // Авторизация через VK
+        function loginVK() {
+            VK.Auth.login(response => {
+                if (response.session) {
+                    const vkToken = response.session.sid;
+                    const credential = firebase.auth.VKAuthProvider.credential(vkToken);
+                    
+                    auth.signInWithCredential(credential)
+                        .then(userCred => {
+                            const user = userCred.user;
+                            document.getElementById("auth-section").style.display = "none";
+                            document.getElementById("user-data").style.display = "block";
+                            document.getElementById("order-form").style.display = "block";
+                            
+                            // Сохраняем данные пользователя
+                            db.collection("users").doc(user.uid).set({
+                                name: `${user.displayName}`,
+                                vkId: response.session.mid,
+                                lastLogin: new Date()
+                            }, { merge: true });
+                            
+                            document.getElementById("user-name").textContent = user.displayName;
+                        });
+                }
+            }, 4); // 4 - доступ к данным профиля
         }
 
+        // Генерация приказа
+        function generateAcceptOrder() {
+            const newEmployee = document.getElementById("new-employee").value;
+            const position = document.getElementById("employee-position").value;
+            const date = document.getElementById("accept-date").value || new Date().toLocaleDateString();
+            
+            const orderText = `[ЦГБ-Н] Приказ о принятии #${Math.floor(Math.random() * 9000) + 1000}\n\n` +
+                             `На основании заявления и трудового договора\n` +
+                             `ПРИНИМАЮ:\n` +
+                             `${newEmployee} на должность ${position}\n` +
+                             `Дата вступления в должность: ${date}\n\n` +
+                             `Подписано: ________________ (${auth.currentUser.displayName})`;
+            
+            document.getElementById("result").textContent = orderText;
+        }
+
+        // Копирование в буфер
         function copyToClipboard() {
-            const result = document.getElementById("result");
-            navigator.clipboard.writeText(result.textContent);
+            navigator.clipboard.writeText(document.getElementById("result").textContent);
             alert("Приказ скопирован!");
         }
     </script>
