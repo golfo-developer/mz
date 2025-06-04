@@ -107,12 +107,11 @@
     </div>
 
     <script>
-        // При загрузке страницы подставляем имя пользователя из localStorage
         window.onload = function() {
             const userName = localStorage.getItem("userName");
             if (!userName) {
                 alert("Пожалуйста, выполните вход через VK.");
-                window.location.href = "login.html";
+                window.location.href = "login.html"; // Путь к странице входа
                 return;
             }
             document.getElementById("user-name").textContent = userName;
