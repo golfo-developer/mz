@@ -1,60 +1,133 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <title>Вход через ВКонтакте</title>
-  <script src="https://vk.com/js/api/openapi.js?169"></script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      max-width: 600px;
-      margin: 50px auto;
-      text-align: center;
-    }
-    button {
-      background-color: #4a76a8;
-      color: white;
-      border: none;
-      padding: 15px 30px;
-      font-size: 18px;
-      cursor: pointer;
-      border-radius: 6px;
-    }
-    button:hover {
-      background-color: #3b5c7e;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VK Auth Example</title>
+    <script src="https://vk.com/js/api/openapi.js?169" type="text/javascript"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+        }
+        button {
+            background-color: #4a76a8;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        button:hover {
+            background-color: #3d638a;
+        }
+        #user-info {
+            margin-top: 20px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            display: none;
+        }
+        #user-photo {
+            border-radius: 50%;
+            margin-bottom: 10px;
+        }
+        .error {
+            color: red;
+            margin-top: 20px;
+        }
+    </style>
 </head>
 <body>
+    <h1>Пример авторизации через VK</h1>
+    
+    <div id="auth-section">
+        <button id="vk-login-btn">Войти через VK</button>
+    </div>
+    
+    <div id="user-info">
+        <img id="user-photo" src="" alt="Фото профиля">
+        <h2 id="user-name"></h2>
+        <button id="logout-btn">Выйти</button>
+    </div>
+    
+    <div id="error-message" class="error"></div>
 
-  <h1>Вход через ВКонтакте</h1>
-  <button id="vkLoginBtn">Войти через VK</button>
+    <script>
+        // Инициализация VK API
+        VK.init({
+            apiId: 53689256, // Замените на ваш реальный app_id
+            onlyWidgets: false
+        });
 
-  <script>
-    // Инициализируем VK API (замени на свой appId)
-    VK.init({ apiId: 53689256 });
+        // Элементы DOM
+        const loginBtn = document.getElementById('vk-login-btn');
+        const logoutBtn = document.getElementById('logout-btn');
+        const userInfo = document.getElementById('user-info');
+        const userPhoto = document.getElementById('user-photo');
+        const userName = document.getElementById('user-name');
+        const errorMessage = document.getElementById('error-message');
+        const authSection = document.getElementById('auth-section');
 
-    document.getElementById('vkLoginBtn').onclick = function() {
-      VK.Auth.login(function(response) {
-        if (response.session) {
-          // Авторизация успешна, можно получить имя
-          const user = response.session.user;
-          const userName = user.first_name + ' ' + user.last_name;
+        // Проверка статуса авторизации при загрузке
+        VK.Auth.getLoginStatus(function(response) {
+            if (response.status === 'connected') {
+                showUserInfo(response.session.user);
+            }
+        });
 
-          alert('Привет, ' + userName + '! Авторизация успешна.');
+        // Обработчик кнопки входа
+        loginBtn.addEventListener('click', function() {
+            VK.Auth.login(function(response) {
+                if (response.session) {
+                    showUserInfo(response.session.user);
+                } else {
+                    showError('Пользователь отменил вход');
+                }
+            }, function(error) {
+                showError('Ошибка авторизации: ' + error.errorMessage);
+            }, VK.access.FRIENDS | VK.access.PHOTOS); // Запрашиваемые права
+        });
 
-          // Здесь можно сохранить userId или другую инфу в localStorage, если нужно
-          localStorage.setItem('vkUserId', user.id);
-          localStorage.setItem('vkUserName', userName);
+        // Обработчик кнопки выхода
+        logoutBtn.addEventListener('click', function() {
+            VK.Auth.logout(function() {
+                userInfo.style.display = 'none';
+                authSection.style.display = 'block';
+                errorMessage.textContent = '';
+            });
+        });
 
-          // Перенаправляем на страницу генератора приказов
-          window.location.href = 'main.html';
-        } else {
-          alert('Авторизация не прошла.');
+        // Показать информацию о пользователе
+        function showUserInfo(user) {
+            userPhoto.src = user.photo_200 || user.photo_100 || user.photo_50;
+            userName.textContent = user.first_name + ' ' + user.last_name;
+            userInfo.style.display = 'block';
+            authSection.style.display = 'none';
+            errorMessage.textContent = '';
+            
+            // Дополнительные данные о пользователе
+            VK.Api.call('users.get', { 
+                user_ids: user.id, 
+                fields: 'photo_max,city,country' 
+            }, function(response) {
+                if (response.response) {
+                    const userData = response.response[0];
+                    console.log('Полные данные пользователя:', userData);
+                }
+            });
         }
-      }, 4); // 4 — доступ к профилю пользователя
-    };
-  </script>
 
+        // Показать ошибку
+        function showError(message) {
+            errorMessage.textContent = message;
+            console.error(message);
+        }
+    </script>
 </body>
 </html>
