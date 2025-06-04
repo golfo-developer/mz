@@ -1,32 +1,54 @@
 <!DOCTYPE html>
 <html lang="ru">
-<head>
-  <meta charset="UTF-8" />
-  <title>VKID Авторизация</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <script src="https://unpkg.com/@vkid/sdk@<3.0.0/dist-sdk/umd/index.js"></script>
+    <title>Портал - Министерство здравоохранения</title>
+    <meta name="description" content="Портал министерства здравоохранения. Всё самое необходимое на одном сайте">
+    <meta name="theme-color" content="#ee4018">
 
-  <style>
-    html, body {
-      height: 100%;
-      margin: 0;
-      padding: 0;
-      background: #f4f4f4;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-family: Arial, sans-serif;
-    }
-    div {
-      /* Контейнер, куда вставляется виджет */
-      min-width: 280px;
-    }
-  </style>
-</head>
-<body>
+    <meta property="og:description" content="Портал министерства здравоохранения. Всё самое необходимое на одном сайте">
+    <meta property="og:image" content="/images/og_image.png">
 
-  <div>
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:description" content="Портал министерства здравоохранения. Всё самое необходимое на одном сайте">
+    <meta name="twitter:image" content="/images/og_image.png">
+
+    <script src="/scripts/jquery.js"></script>
+
+    <link href="https://fonts.googleapis.com/icon?family=Material+Symbols+Rounded" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.2/css/brands.min.css" rel="stylesheet" crossorigin="anonymous">
+    <script type="module" crossorigin src="/assets/index-3f0681f7.js"></script>
+    <link rel="stylesheet" href="/assets/index-d2bdd13b.css">
+
+    <!-- VKID SDK -->
+    <script src="https://unpkg.com/@vkid/sdk@^2.1.0/dist-sdk/umd/index.js"></script>
+
+    <style>
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        background: #f7f7f7;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      #vkid-root {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 150px;
+      }
+    </style>
+  </head>
+  <body oncontextmenu="return false;">
+    <!-- VKID Floating One Tap -->
+    <div id="vkid-root"></div>
+
     <script type="text/javascript">
       if ('VKIDSDK' in window) {
         const VKID = window.VKIDSDK;
@@ -36,19 +58,17 @@
           redirectUrl: 'https://golfo-developer.github.io/mz/',
           responseMode: VKID.ConfigResponseMode.Callback,
           source: VKID.ConfigSource.LOWCODE,
-          scope: '', // Заполните нужными доступами по необходимости
+          scope: '',
         });
 
-        const oAuth = new VKID.OAuthList();
+        const floatingOneTap = new VKID.FloatingOneTap();
 
-        oAuth.render({
-          container: document.currentScript.parentElement,
-          oauthList: [
-            'vkid'
-          ]
+        floatingOneTap.render({
+          appName: 'MZ HELPER',
+          showAlternativeLogin: true
         })
         .on(VKID.WidgetEvents.ERROR, vkidOnError)
-        .on(VKID.OAuthListInternalEvents.LOGIN_SUCCESS, function (payload) {
+        .on(VKID.FloatingOneTapInternalEvents.LOGIN_SUCCESS, function (payload) {
           const code = payload.code;
           const deviceId = payload.device_id;
 
@@ -58,21 +78,23 @@
         });
 
         function vkidOnSuccess(data) {
-          console.log('Авторизация успешна!', data);
-          // Здесь можно обработать данные (например, сохранить токен)
-          // А после успешной авторизации сделать редирект:
+          floatingOneTap.close();
+          console.log('✅ Авторизация успешна!', data);
+
+          // Пример: сохраняем access_token
+          localStorage.setItem('vk_access_token', data.access_token);
+          localStorage.setItem('vk_user_id', data.user.id);
+
+          // Переход на основную страницу
           window.location.href = '/mz/main.html';
         }
 
         function vkidOnError(error) {
-          console.error('Ошибка авторизации:', error);
-          alert('Ошибка при авторизации. Попробуйте позже.');
+          console.error('❌ Ошибка авторизации VKID:', error);
         }
       } else {
-        console.error('VKID SDK не загружен');
+        console.error('❌ VKID SDK не загружен');
       }
     </script>
-  </div>
-
-</body>
+  </body>
 </html>
