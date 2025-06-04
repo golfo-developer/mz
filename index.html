@@ -2,32 +2,103 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <title>Авторизация VK</title>
+  <title>Вход — ЦГБ-Н</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding-top: 100px;
+    }
+
+    .vk-bg {
+      background-color: #4a76a8;
+    }
+
+    .vk-bg:hover {
+      background-color: #3b5f87;
+    }
+
+    .p-button {
+      border: none;
+      padding: 10px 20px;
+      font-size: 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .text-white {
+      color: white;
+    }
+
+    .text-2xl {
+      font-size: 1.5em;
+    }
+  </style>
+
+  <!-- VK Open API -->
+  <script src="https://vk.com/js/api/openapi.js?169"></script>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
 </head>
 <body>
-  <h1>Авторизация через VK</h1>
-  <p id="status">Обработка данных...</p>
+
+  <h2>Вход через ВКонтакте</h2>
+
+  <button id="vkCustomButton" class="p-button p-component vk-bg text-white" type="button">
+    <span class="p-button-icon p-button-icon-left fab fa-vk text-2xl"></span>
+    <span class="p-button-label">Войти с помощью VK ID</span>
+  </button>
 
   <script>
-    const hash = window.location.hash;
-    if (hash.includes("access_token")) {
-      const params = new URLSearchParams(hash.substring(1));
-      const token = params.get("access_token");
-      const userId = params.get("user_id");
+    // Firebase init
+    const firebaseConfig = {
+      apiKey: "AIzaSyA8OSXuugRELrHVNGwaawKacppy6i9gFiU",
+      authDomain: "mz-database-ff085.firebaseapp.com",
+      projectId: "mz-database-ff085",
+      storageBucket: "mz-database-ff085.appspot.com",
+      messagingSenderId: "653569103334",
+      appId: "1:653569103334:web:00ee795c387f982a71b227"
+    };
 
-      document.getElementById("status").innerText = `Вы вошли как VK ID: ${userId}`;
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
 
-      // 💾 Можно сохранить в localStorage или отправить на сервер
-      localStorage.setItem("vk_token", token);
-      localStorage.setItem("vk_user_id", userId);
+    // VK init
+    VK.init({ apiId: 53689256 }); // Заменить на твой appId, если нужно
 
-      // 🔁 Редирект на главную или в личный кабинет
-      setTimeout(() => {
-        window.location.href = "/dashboard.html";
-      }, 2000);
-    } else {
-      document.getElementById("status").innerText = "Ошибка авторизации";
-    }
+    document.getElementById("vkCustomButton").addEventListener("click", () => {
+      VK.Auth.login(function(response) {
+        if (response.session) {
+          const userId = response.session.user.id;
+          const firstName = response.session.user.first_name;
+          const lastName = response.session.user.last_name;
+          const userName = `${firstName} ${lastName}`;
+
+          // Сохраняем в Firestore
+          db.collection("users").doc("vk_" + userId).set({
+            name: userName,
+            vkId: userId,
+            lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+          }, { merge: true })
+          .then(() => {
+            localStorage.setItem("userName", userName);
+            localStorage.setItem("userVKId", userId);
+            window.location.href = "main.html";
+          })
+          .catch((err) => {
+            alert("Ошибка сохранения: " + err.message);
+          });
+        } else {
+          alert("Пользователь отменил авторизацию.");
+        }
+      }, 4); // 4 — доступ к базовому профилю
+    });
   </script>
 </body>
 </html>
