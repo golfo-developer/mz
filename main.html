@@ -1,31 +1,111 @@
-<script>
-    // Проверка авторизации
-    const currentUserId = localStorage.getItem("userId");
-    const userName = localStorage.getItem("userName");
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>ЦГБ-Н — Главная</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: #f2f3f5;
+            margin: 0;
+            padding: 0;
+        }
 
-    if (!currentUserId || !userName) {
-        // Неавторизованный пользователь
-        window.location.href = "index.html";
-    }
+        .main-container {
+            max-width: 800px;
+            margin: 50px auto;
+            background: #fff;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
 
-    window.onload = function () {
-        document.getElementById("user-name").textContent = userName;
-        document.getElementById("auth-section").style.display = "none";
-        document.getElementById("user-data").style.display = "block";
-        document.getElementById("order-form").style.display = "block";
+        h1, h2 {
+            text-align: center;
+            color: #2c3e50;
+        }
 
-        // Firestore: загрузка подписи и должности
-        db.collection("users").doc(currentUserId).get().then(doc => {
-            if (doc.exists) {
-                const data = doc.data();
-                if (data.position) {
-                    document.getElementById("user-position").textContent = data.position;
-                    document.getElementById("position-input").value = data.position;
-                }
-                if (data.signature) {
-                    document.getElementById("signature-input").value = data.signature;
-                }
-            }
-        });
-    };
-</script>
+        label {
+            font-weight: bold;
+            margin-top: 15px;
+            display: block;
+        }
+
+        input, button, textarea {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: #3b7ddd;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #315fc4;
+        }
+
+        #result {
+            white-space: pre-line;
+            background: #f9f9f9;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        .user-info {
+            margin-bottom: 30px;
+        }
+
+        .user-info p {
+            font-size: 18px;
+            color: #2d3436;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <h1>Генератор приказов ЦГБ-Н</h1>
+
+        <div class="user-info">
+            <p>Добро пожаловать, <span id="user-name">...</span></p>
+
+            <label for="user-position">Ваша должность:</label>
+            <input type="text" id="user-position" placeholder="Например: Заведующий отделением">
+
+            <label for="user-signature">Ваша подпись (ФИО полностью):</label>
+            <input type="text" id="user-signature" placeholder="Иванов Иван Иванович">
+        </div>
+
+        <div class="order-form">
+            <h2>📜 Создание приказа</h2>
+
+            <label for="new-employee">ФИО нового сотрудника:</label>
+            <input type="text" id="new-employee" placeholder="Иванов Иван Иванович">
+
+            <label for="employee-position">Должность сотрудника:</label>
+            <input type="text" id="employee-position" placeholder="Фельдшер">
+
+            <label for="accept-date">Дата принятия:</label>
+            <input type="date" id="accept-date">
+
+            <button onclick="generateAcceptOrder()">Сгенерировать приказ</button>
+
+            <div id="result"></div>
+
+            <button onclick="copyToClipboard()">Копировать текст приказа</button>
+        </div>
+    </div>
+
+    <script>
+        // Получаем данные из localStorage после входа через VK
+        const user
