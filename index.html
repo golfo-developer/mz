@@ -1,62 +1,90 @@
 <!DOCTYPE html>
 <html lang="ru">
-<head>
-  <meta charset="UTF-8" />
-  <title>VKID Авторизация</title>
-  <script src="https://unpkg.com/@vkid/sdk@^2.1.0/dist-sdk/umd/index.js"></script>
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-<div id="vkid-root"></div>
+    <title>Портал - Министерство здравоохранения</title>
+    <meta name="description" content="Портал министерства здравоохранения. Всё самое необходимое на одном сайте">
+    <meta name="theme-color" content="#ee4018">
 
-<script type="text/javascript">
-  // Проверяем, что VKID SDK загружен
-  if ('VKIDSDK' in window) {
-    const VKID = window.VKIDSDK;
+    <meta property="og:description" content="Портал министерства здравоохранения. Всё самое необходимое на одном сайте">
+    <meta property="og:image" content="/images/og_image.png">
 
-    // Инициализируем SDK с параметрами
-    VKID.Config.init({
-      app: 53689889, // Твой appId VK
-      redirectUrl: 'https://golfo-developer.github.io/mz/', // URL редиректа после авторизации
-      responseMode: VKID.ConfigResponseMode.Callback,
-      source: VKID.ConfigSource.LOWCODE,
-      scope: '', // Доступы, например: 'email'
-    });
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:description" content="Портал министерства здравоохранения. Всё самое необходимое на одном сайте">
+    <meta name="twitter:image" content="/images/og_image.png">
 
-    // Создаем виджет Floating One Tap
-    const floatingOneTap = new VKID.FloatingOneTap();
+    <script src="/scripts/jquery.js"></script>
+    <!--<script src="/scripts/snowfall.js"></script>-->
 
-    floatingOneTap.render({
-      appName: 'MZ HELPER',
-      showAlternativeLogin: true
-    })
-    .on(VKID.WidgetEvents.ERROR, vkidOnError)
-    .on(VKID.FloatingOneTapInternalEvents.LOGIN_SUCCESS, function (payload) {
-      const code = payload.code;
-      const deviceId = payload.device_id;
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Symbols+Rounded"
+      rel="stylesheet"
+    />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.2/css/brands.min.css" rel="stylesheet" crossorigin="anonymous">
+    <script type="module" crossorigin src="/assets/index-3f0681f7.js"></script>
+    <link rel="stylesheet" href="/assets/index-d2bdd13b.css">
 
-      // Обмен кода на токен
-      VKID.Auth.exchangeCode(code, deviceId)
-        .then(vkidOnSuccess)
-        .catch(vkidOnError);
-    });
+    <!-- VKID SDK -->
+    <script src="https://unpkg.com/@vkid/sdk@^2.1.0/dist-sdk/umd/index.js"></script>
+  </head>
+  <body oncontextmenu="return false;">
+    <div id="app" class="p-input-filled"></div>
 
-    function vkidOnSuccess(data) {
-      floatingOneTap.close();
+    <!-- VKID Floating One Tap -->
+    <div id="vkid-root"></div>
 
-      console.log('Авторизация успешна!', data);
-      // Здесь можно обработать полученные данные:
-      // data содержит access_token, user info и т.п.
-    }
+    <script type="text/javascript">
+      if ('VKIDSDK' in window) {
+        const VKID = window.VKIDSDK;
 
-    function vkidOnError(error) {
-      console.error('Ошибка авторизации VKID:', error);
-      // Можно вывести сообщение пользователю
-    }
-  } else {
-    console.error('VKID SDK не загружен');
-  }
-</script>
+        VKID.Config.init({
+          app: 53689889, // Замени на свой VK App ID
+          redirectUrl: 'https://golfo-developer.github.io/mz/', // Укажи нужный редирект
+          responseMode: VKID.ConfigResponseMode.Callback,
+          source: VKID.ConfigSource.LOWCODE,
+          scope: '', // Опционально: 'email'
+        });
 
-</body>
+        const floatingOneTap = new VKID.FloatingOneTap();
+
+        floatingOneTap.render({
+          appName: 'MZ HELPER',
+          showAlternativeLogin: true
+        })
+        .on(VKID.WidgetEvents.ERROR, vkidOnError)
+        .on(VKID.FloatingOneTapInternalEvents.LOGIN_SUCCESS, function (payload) {
+          const code = payload.code;
+          const deviceId = payload.device_id;
+
+          VKID.Auth.exchangeCode(code, deviceId)
+            .then(vkidOnSuccess)
+            .catch(vkidOnError);
+        });
+
+        function vkidOnSuccess(data) {
+          floatingOneTap.close();
+
+          console.log('✅ Авторизация успешна!', data);
+
+          // Пример: сохраняем access_token и user_id в localStorage
+          localStorage.setItem('vk_access_token', data.access_token);
+          localStorage.setItem('vk_user_id', data.user.id);
+
+          // Перенаправляем пользователя на дашборд или главную страницу
+          window.location.href = '/dashboard.html';
+        }
+
+        function vkidOnError(error) {
+          console.error('❌ Ошибка авторизации VKID:', error);
+        }
+      } else {
+        console.error('❌ VKID SDK не загружен');
+      }
+    </script>
+
+    <!--<div id="snowfall-background" style="z-index: 0; pointer-events: none; position: fixed; width: 100%;height: 100%;top:0"></div>-->
+  </body>
 </html>
