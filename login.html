@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Вход — ЦГБ-Н</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
   <style>
@@ -39,14 +39,15 @@
     }
   </style>
 
-  <!-- VK ID SDK -->
-  <script src="https://unpkg.com/@vkid/sdk@3.0.0"></script>
+  <!-- VK Open API -->
+  <script src="https://vk.com/js/api/openapi.js?169"></script>
 
   <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
 </head>
 <body>
+
   <h2>Вход через ВКонтакте</h2>
 
   <button id="vkCustomButton" class="p-button p-component vk-bg text-white" type="button">
@@ -55,53 +56,48 @@
   </button>
 
   <script>
-    // Инициализация Firebase
+    // Firebase init
     const firebaseConfig = {
       apiKey: "AIzaSyA8OSXuugRELrHVNGwaawKacppy6i9gFiU",
       authDomain: "mz-database-ff085.firebaseapp.com",
       projectId: "mz-database-ff085",
       storageBucket: "mz-database-ff085.appspot.com",
       messagingSenderId: "653569103334",
-      appId: "1:653569103334:web:00ee795c387f982a71b227",
-      measurementId: "G-XY09QY0EDY"
+      appId: "1:653569103334:web:00ee795c387f982a71b227"
     };
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    // Инициализация VK ID SDK
-    const VKID = window.VKIDSDK;
-    VKID.Config.init({
-      app: 53689889, // Замени на свой VK App ID, если другой
-      responseMode: VKID.ConfigResponseMode.Callback,
-      source: VKID.ConfigSource.WEB,
-    });
+    // VK init
+    VK.init({ apiId: 53689256 }); // Заменить на твой appId, если нужно
 
     document.getElementById("vkCustomButton").addEventListener("click", () => {
-      VKID.Auth.login()
-        .then(({ code, device_id }) => {
-          return VKID.Auth.exchangeCode(code, device_id);
-        })
-        .then((data) => {
-          const user = data.user;
-          const fullName = `${user.first_name} ${user.last_name}`;
-          const vkId = user.id;
+      VK.Auth.login(function(response) {
+        if (response.session) {
+          const userId = response.session.user.id;
+          const firstName = response.session.user.first_name;
+          const lastName = response.session.user.last_name;
+          const userName = `${firstName} ${lastName}`;
 
           // Сохраняем в Firestore
-          return db.collection("users").doc("vk_" + vkId).set({
-            name: fullName,
-            vkId: vkId,
+          db.collection("users").doc("vk_" + userId).set({
+            name: userName,
+            vkId: userId,
             lastLogin: firebase.firestore.FieldValue.serverTimestamp()
-          }, { merge: true }).then(() => {
-            // localStorage и редирект
-            localStorage.setItem("userName", fullName);
-            localStorage.setItem("userVKId", vkId);
+          }, { merge: true })
+          .then(() => {
+            localStorage.setItem("userName", userName);
+            localStorage.setItem("userVKId", userId);
             window.location.href = "main.html";
+          })
+          .catch((err) => {
+            alert("Ошибка сохранения: " + err.message);
           });
-        })
-        .catch((err) => {
-          alert("Ошибка входа: " + err.message);
-        });
+        } else {
+          alert("Пользователь отменил авторизацию.");
+        }
+      }, 4); // 4 — доступ к базовому профилю
     });
   </script>
 </body>
