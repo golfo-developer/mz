@@ -3,11 +3,39 @@
 <head>
   <meta charset="UTF-8">
   <title>Вход — ЦГБ-Н</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
   <style>
     body {
       font-family: Arial, sans-serif;
       text-align: center;
       padding-top: 100px;
+    }
+
+    .vk-bg {
+      background-color: #4a76a8;
+    }
+
+    .vk-bg:hover {
+      background-color: #3b5f87;
+    }
+
+    .p-button {
+      border: none;
+      padding: 10px 20px;
+      font-size: 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .text-white {
+      color: white;
+    }
+
+    .text-2xl {
+      font-size: 1.5em;
     }
   </style>
 
@@ -20,7 +48,11 @@
 </head>
 <body>
   <h2>Вход через ВКонтакте</h2>
-  <div id="vk_button"></div>
+
+  <button id="vkCustomButton" class="p-button p-component vk-bg text-white" type="button">
+    <span class="p-button-icon p-button-icon-left fab fa-vk text-2xl"></span>
+    <span class="p-button-label">Войти с помощью VK ID</span>
+  </button>
 
   <script>
     // Инициализация Firebase
@@ -39,47 +71,33 @@
 
     // Инициализация VK ID SDK
     const VKID = window.VKIDSDK;
-
     VKID.Config.init({
-      app: 53689889, // Твой ID приложения
-      redirectUrl: window.location.href, // Перезагрузка этой же страницы
+      app: 53689889, // Замени на свой VK App ID, если другой
       responseMode: VKID.ConfigResponseMode.Callback,
       source: VKID.ConfigSource.WEB,
     });
 
-    const widget = new VKID.FloatingOneTap();
-    widget.render({
-      containerId: "vk_button",
-      appName: "ЦГБ-Н",
-      showAlternativeLogin: true
-    })
-    .on(VKID.WidgetEvents.ERROR, (e) => {
-      alert("Ошибка авторизации: " + e.message);
-    })
-    .on(VKID.FloatingOneTapInternalEvents.LOGIN_SUCCESS, (payload) => {
-      const code = payload.code;
-      const deviceId = payload.device_id;
-
-      // Обмен кода на данные пользователя
-      VKID.Auth.exchangeCode(code, deviceId)
+    document.getElementById("vkCustomButton").addEventListener("click", () => {
+      VKID.Auth.login()
+        .then(({ code, device_id }) => {
+          return VKID.Auth.exchangeCode(code, device_id);
+        })
         .then((data) => {
           const user = data.user;
           const fullName = `${user.first_name} ${user.last_name}`;
           const vkId = user.id;
 
           // Сохраняем в Firestore
-          db.collection("users").doc("vk_" + vkId).set({
+          return db.collection("users").doc("vk_" + vkId).set({
             name: fullName,
             vkId: vkId,
             lastLogin: firebase.firestore.FieldValue.serverTimestamp()
-          }, { merge: true });
-
-          // Сохраняем в localStorage
-          localStorage.setItem("userName", fullName);
-          localStorage.setItem("userVKId", vkId);
-
-          // Редирект
-          window.location.href = "main.html";
+          }, { merge: true }).then(() => {
+            // localStorage и редирект
+            localStorage.setItem("userName", fullName);
+            localStorage.setItem("userVKId", vkId);
+            window.location.href = "main.html";
+          });
         })
         .catch((err) => {
           alert("Ошибка входа: " + err.message);
