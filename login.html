@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Вход — ЦГБ-Н</title>
+    <style>
+        body { font-family: Arial; max-width: 400px; margin: 50px auto; padding: 20px; text-align: center; }
+        button { background: #4CAF50; color: white; border: none; padding: 10px 15px; cursor: pointer; font-size: 16px; }
+    </style>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://vk.com/js/api/openapi.js?169"></script>
+</head>
+<body>
+    <h2>Авторизация через ВКонтакте</h2>
+    <button onclick="loginVK()">Войти через VK</button>
+
+    <script>
+        // Firebase конфигурация
+        const firebaseConfig = {
+            apiKey: "AIzaSyA8OSXuugRELrHVNGwaawKacppy6i9gFiU",
+            authDomain: "mz-database-ff085.firebaseapp.com",
+            projectId: "mz-database-ff085",
+            storageBucket: "mz-database-ff085.appspot.com",
+            messagingSenderId: "653569103334",
+            appId: "1:653569103334:web:00ee795c387f982a71b227",
+            measurementId: "G-XY09QY0EDY"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        VK.init({ apiId: 53689256 });
+
+        function loginVK() {
+            VK.Auth.login(function(response) {
+                if (response.session) {
+                    const userInfo = response.session.user;
+                    const userName = `${userInfo.first_name} ${userInfo.last_name}`;
+
+                    // Сохраняем в Firestore
+                    db.collection("users").doc("vk_" + userInfo.id).set({
+                        name: userName,
+                        vkId: userInfo.id,
+                        lastLogin: new Date()
+                    }, { merge: true }).then(() => {
+                        // Сохраняем данные в localStorage для main.html
+                        localStorage.setItem("userName", userName);
+                        localStorage.setItem("userVKId", userInfo.id);
+                        // Редирект на главную страницу с приказами
+                        window.location.href = "main.html";
+                    });
+                } else {
+                    alert("Авторизация не удалась.");
+                }
+            }, 4);
+        }
+    </script>
+</body>
+</html>
