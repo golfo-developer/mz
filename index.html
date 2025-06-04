@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Генератор приказов ЦГБ-Н</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .form-group { margin-bottom: 15px; }
+        textarea, input, select { width: 100%; padding: 8px; margin-top: 5px; }
+        button { background: #4CAF50; color: white; border: none; padding: 10px 15px; cursor: pointer; }
+        #result { margin-top: 20px; white-space: pre-line; border: 1px solid #ddd; padding: 15px; }
+    </style>
+</head>
+<body>
+    <h1>Генератор приказов ЦГБ-Н</h1>
+    
+    <div class="form-group">
+        <label>Шаблон приказа:</label>
+        <select id="template">
+            <option value="feldsher">Допуск фельдшера</option>
+            <option value="other">Другой приказ</option>
+        </select>
+    </div>
+
+    <div id="feldsher-fields">
+        <div class="form-group">
+            <label>ФИО фельдшера:</label>
+            <input type="text" id="name" placeholder="Roman_Asimov">
+        </div>
+        <div class="form-group">
+            <label>Уроки и оценки (каждая строка = урок + оценка):</label>
+            <textarea id="lessons" rows="4">Урок 4 и проверку знаний; Оценка преподавателя: 5
+Урок 5 и проверку знаний; Оценка преподавателя: 5</textarea>
+        </div>
+        <div class="form-group">
+            <label>Должность подписанта:</label>
+            <input type="text" id="signer_post" value="Заместитель Заведующего Отделением Интернатуры">
+        </div>
+        <div class="form-group">
+            <label>ФИО подписанта:</label>
+            <input type="text" id="signer_name" value="Воронковский Андрей Андреевич">
+        </div>
+        <div class="form-group">
+            <label>Тег подписанта:</label>
+            <input type="text" id="signer_tag" value="@dr_swag">
+        </div>
+    </div>
+
+    <button onclick="generateOrder()">Сгенерировать приказ</button>
+    
+    <div id="result"></div>
+    <button onclick="copyToClipboard()" id="copyBtn" style="display: none;">Копировать</button>
+
+    <script>
+        function generateOrder() {
+            const template = document.getElementById("template").value;
+            let orderText = "";
+            
+            if (template === "feldsher") {
+                const name = document.getElementById("name").value;
+                const lessons = document.getElementById("lessons").value;
+                const signerPost = document.getElementById("signer_post").value;
+                const signerName = document.getElementById("signer_name").value;
+                const signerTag = document.getElementById("signer_tag").value;
+                
+                orderText = `[ЦГБ-Н] Приказ #${Math.floor(Math.random() * 9000) + 1000}\n\n` +
+                            `Фельдшер ${name} прослушал:\n\n` +
+                            `${lessons}\n\n` +
+                            `Сотрудник допущен до прохождения Практической Подготовки Фельдшера\n\n` +
+                            `Подписано: ${signerPost} | ${signerName}.\n${signerTag}`;
+            }
+            
+            document.getElementById("result").textContent = orderText;
+            document.getElementById("copyBtn").style.display = "block";
+        }
+
+        function copyToClipboard() {
+            const result = document.getElementById("result");
+            navigator.clipboard.writeText(result.textContent);
+            alert("Приказ скопирован!");
+        }
+    </script>
+</body>
+</html>
