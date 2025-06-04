@@ -1,133 +1,52 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VK Auth Example</title>
-    <script src="https://vk.com/js/api/openapi.js?169" type="text/javascript"></script>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            text-align: center;
-        }
-        button {
-            background-color: #4a76a8;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            font-size: 16px;
-            border-radius: 4px;
-            cursor: pointer;
-            margin: 10px;
-        }
-        button:hover {
-            background-color: #3d638a;
-        }
-        #user-info {
-            margin-top: 20px;
-            padding: 20px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            display: none;
-        }
-        #user-photo {
-            border-radius: 50%;
-            margin-bottom: 10px;
-        }
-        .error {
-            color: red;
-            margin-top: 20px;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <title>Вход — ЦГБ-Н</title>
 </head>
 <body>
-    <h1>Пример авторизации через VK</h1>
-    
-    <div id="auth-section">
-        <button id="vk-login-btn">Войти через VK</button>
-    </div>
-    
-    <div id="user-info">
-        <img id="user-photo" src="" alt="Фото профиля">
-        <h2 id="user-name"></h2>
-        <button id="logout-btn">Выйти</button>
-    </div>
-    
-    <div id="error-message" class="error"></div>
+  <h1>Авторизация через VKID</h1>
+  <div id="vkid-container"></div>
 
-    <script>
-        // Инициализация VK API
-        VK.init({
-            apiId: 53689256, // Замените на ваш реальный app_id
-            onlyWidgets: false
-        });
+  <script src="https://unpkg.com/@vkid/sdk@<3.0.0/dist-sdk/umd/index.js"></script>
+  <script>
+    if ('VKIDSDK' in window) {
+      const VKID = window.VKIDSDK;
 
-        // Элементы DOM
-        const loginBtn = document.getElementById('vk-login-btn');
-        const logoutBtn = document.getElementById('logout-btn');
-        const userInfo = document.getElementById('user-info');
-        const userPhoto = document.getElementById('user-photo');
-        const userName = document.getElementById('user-name');
-        const errorMessage = document.getElementById('error-message');
-        const authSection = document.getElementById('auth-section');
+      VKID.Config.init({
+        app: 53689889,
+        redirectUrl: window.location.href,  // сам себя обрабатываем
+        responseMode: VKID.ConfigResponseMode.Callback,
+        source: VKID.ConfigSource.LOWCODE,
+        scope: '',
+      });
 
-        // Проверка статуса авторизации при загрузке
-        VK.Auth.getLoginStatus(function(response) {
-            if (response.status === 'connected') {
-                showUserInfo(response.session.user);
-            }
-        });
+      const oAuth = new VKID.OAuthList();
 
-        // Обработчик кнопки входа
-        loginBtn.addEventListener('click', function() {
-            VK.Auth.login(function(response) {
-                if (response.session) {
-                    showUserInfo(response.session.user);
-                } else {
-                    showError('Пользователь отменил вход');
-                }
-            }, function(error) {
-                showError('Ошибка авторизации: ' + error.errorMessage);
-            }, VK.access.FRIENDS | VK.access.PHOTOS); // Запрашиваемые права
-        });
+      oAuth.render({
+        container: document.getElementById("vkid-container"),
+        oauthList: ['vkid']
+      })
+      .on(VKID.WidgetEvents.ERROR, (error) => {
+        alert("Ошибка входа: " + JSON.stringify(error));
+      })
+      .on(VKID.OAuthListInternalEvents.LOGIN_SUCCESS, function(payload) {
+        const code = payload.code;
+        const deviceId = payload.device_id;
 
-        // Обработчик кнопки выхода
-        logoutBtn.addEventListener('click', function() {
-            VK.Auth.logout(function() {
-                userInfo.style.display = 'none';
-                authSection.style.display = 'block';
-                errorMessage.textContent = '';
-            });
-        });
+        VKID.Auth.exchangeCode(code, deviceId)
+          .then(data => {
+            const userName = data.user_info?.name || "Пользователь";
+            localStorage.setItem("userName", userName);
 
-        // Показать информацию о пользователе
-        function showUserInfo(user) {
-            userPhoto.src = user.photo_200 || user.photo_100 || user.photo_50;
-            userName.textContent = user.first_name + ' ' + user.last_name;
-            userInfo.style.display = 'block';
-            authSection.style.display = 'none';
-            errorMessage.textContent = '';
-            
-            // Дополнительные данные о пользователе
-            VK.Api.call('users.get', { 
-                user_ids: user.id, 
-                fields: 'photo_max,city,country' 
-            }, function(response) {
-                if (response.response) {
-                    const userData = response.response[0];
-                    console.log('Полные данные пользователя:', userData);
-                }
-            });
-        }
-
-        // Показать ошибку
-        function showError(message) {
-            errorMessage.textContent = message;
-            console.error(message);
-        }
-    </script>
+            // Успешно, редиректим на главную страницу
+            window.location.href = "main.html";
+          })
+          .catch(err => {
+            alert("Ошибка обмена кода: " + JSON.stringify(err));
+          });
+      });
+    }
+  </script>
 </body>
 </html>
