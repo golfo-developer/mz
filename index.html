@@ -1,104 +1,78 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <title>Вход — ЦГБ-Н</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <meta charset="UTF-8">
+  <title>Вход | ЦГБ-Н</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      padding-top: 100px;
-    }
-
-    .vk-bg {
-      background-color: #4a76a8;
-    }
-
-    .vk-bg:hover {
-      background-color: #3b5f87;
-    }
-
-    .p-button {
-      border: none;
-      padding: 10px 20px;
-      font-size: 16px;
-      border-radius: 4px;
-      cursor: pointer;
-      display: inline-flex;
+      font-family: sans-serif;
+      display: flex;
       align-items: center;
-      gap: 10px;
+      justify-content: center;
+      height: 100vh;
+      background: #f2f2f2;
+      margin: 0;
     }
 
-    .text-white {
-      color: white;
+    #login-box {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      text-align: center;
     }
 
-    .text-2xl {
-      font-size: 1.5em;
+    h1 {
+      font-size: 22px;
+      margin-bottom: 20px;
     }
   </style>
-
-  <!-- VK Open API -->
-  <script src="https://vk.com/js/api/openapi.js?169"></script>
-
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
 </head>
 <body>
+  <div id="login-box">
+    <h1>Вход через VK ID</h1>
+    <div id="vkid-container"></div>
+  </div>
 
-  <h2>Вход через ВКонтакте</h2>
+  <script src="https://unpkg.com/@vkid/sdk@2.25.0/dist-sdk/umd/index.js"></script>
+  <script type="text/javascript">
+    if ('VKIDSDK' in window) {
+      const VKID = window.VKIDSDK;
 
-  <button id="vkCustomButton" class="p-button p-component vk-bg text-white" type="button">
-    <span class="p-button-icon p-button-icon-left fab fa-vk text-2xl"></span>
-    <span class="p-button-label">Войти с помощью VK ID</span>
-  </button>
+      VKID.Config.init({
+        app: 53689889,
+        redirectUrl: window.location.href,
+        responseMode: VKID.ConfigResponseMode.Callback,
+        source: VKID.ConfigSource.LOWCODE,
+        scope: ''
+      });
 
-  <script>
-    // Firebase init
-    const firebaseConfig = {
-      apiKey: "AIzaSyA8OSXuugRELrHVNGwaawKacppy6i9gFiU",
-      authDomain: "mz-database-ff085.firebaseapp.com",
-      projectId: "mz-database-ff085",
-      storageBucket: "mz-database-ff085.appspot.com",
-      messagingSenderId: "653569103334",
-      appId: "1:653569103334:web:00ee795c387f982a71b227"
-    };
+      const oAuth = new VKID.OAuthList();
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
+      oAuth.render({
+        container: document.getElementById("vkid-container"),
+        oauthList: ['vkid']
+      })
+      .on(VKID.WidgetEvents.ERROR, vkidOnError)
+      .on(VKID.OAuthListInternalEvents.LOGIN_SUCCESS, function (payload) {
+        const code = payload.code;
+        const deviceId = payload.device_id;
 
-    // VK init
-    VK.init({ apiId: 53689256 }); // Заменить на твой appId, если нужно
+        VKID.Auth.exchangeCode(code, deviceId)
+          .then(vkidOnSuccess)
+          .catch(vkidOnError);
+      });
 
-    document.getElementById("vkCustomButton").addEventListener("click", () => {
-      VK.Auth.login(function(response) {
-        if (response.session) {
-          const userId = response.session.user.id;
-          const firstName = response.session.user.first_name;
-          const lastName = response.session.user.last_name;
-          const userName = `${firstName} ${lastName}`;
+      function vkidOnSuccess(data) {
+        const userName = data.user_info?.name || "Пользователь";
+        localStorage.setItem("userName", userName);
+        window.location.href = "main.html";
+      }
 
-          // Сохраняем в Firestore
-          db.collection("users").doc("vk_" + userId).set({
-            name: userName,
-            vkId: userId,
-            lastLogin: firebase.firestore.FieldValue.serverTimestamp()
-          }, { merge: true })
-          .then(() => {
-            localStorage.setItem("userName", userName);
-            localStorage.setItem("userVKId", userId);
-            window.location.href = "main.html";
-          })
-          .catch((err) => {
-            alert("Ошибка сохранения: " + err.message);
-          });
-        } else {
-          alert("Пользователь отменил авторизацию.");
-        }
-      }, 4); // 4 — доступ к базовому профилю
-    });
+      function vkidOnError(error) {
+        alert("Ошибка входа: " + JSON.stringify(error));
+      }
+    }
   </script>
 </body>
 </html>
